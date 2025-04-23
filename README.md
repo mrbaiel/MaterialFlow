@@ -89,20 +89,20 @@
 
     ├── backend/          # Django проект
 
-│ ├── apps/ # Django приложения
-│ │ ├── users/ # Пользователи и аутентификация
-│ │ ├── materials/ # Учёт материалов
-│ │ ├── production/ # Производство пескоблоков
-│ │ ├── orders/ # Заказы
-│ │ ├── employees/ # Работники
-│ │ └── analytics/ # Аналитика и отчёты
-│ ├── backend/ # Настройки проекта
-│ └── telegram_bot/ # Интеграция с Telegram
-├── frontend/ # React приложение
-│ ├── public/
-│ └── src/
-│ ├── components/ # React компоненты
+├── apps/ # Django-приложения
+│ ├── users/ # Пользователи и аутентификация
+│ ├── materials/ # Учёт строительных материалов
+│ ├── production/ # Производство пескоблоков
+│ ├── orders/ # Управление заказами
+│ ├── employees/ # Данные работников
+│ └── analytics/ # Аналитика и отчёты
+├── backend/ # Настройки Django (settings, urls)
+├── telegram_bot/ # Интеграция с Telegram
+├── frontend/ # React-приложение
+│ ├── public/ # Статические файлы (HTML, favicon)
+│ └── src/ # Исходный код фронтенда
+│ ├── components/ # React-компоненты (кнопки, формы)
 │ ├── pages/ # Страницы приложения
-│ ├── services/ # API-клиенты
-│ └── store/ # Redux хранилище
-├── docker-compose.yml # Настройки Docker
+│ ├── services/ # API-клиенты (axios, запросы к бэкенду)
+│ └── store/ # Redux-хранилище (состояние приложения)
+└── docker-compose.yml # Конфигурация Docker
