@@ -86,23 +86,23 @@
    API документация: http://localhost:8000/api/docs/
 
 ## Структура проекта
-
-    ├── backend/          # Django проект
-
-├── apps/ # Django-приложения
-│ ├── users/ # Пользователи и аутентификация
-│ ├── materials/ # Учёт строительных материалов
-│ ├── production/ # Производство пескоблоков
-│ ├── orders/ # Управление заказами
-│ ├── employees/ # Данные работников
-│ └── analytics/ # Аналитика и отчёты
-├── backend/ # Настройки Django (settings, urls)
-├── telegram_bot/ # Интеграция с Telegram
-├── frontend/ # React-приложение
-│ ├── public/ # Статические файлы (HTML, favicon)
-│ └── src/ # Исходный код фронтенда
-│ ├── components/ # React-компоненты (кнопки, формы)
-│ ├── pages/ # Страницы приложения
-│ ├── services/ # API-клиенты (axios, запросы к бэкенду)
-│ └── store/ # Redux-хранилище (состояние приложения)
-└── docker-compose.yml # Конфигурация Docker
+   ├── backend/ # Django-проект
+   │ ├── apps/ # Django-приложения
+   │ │ ├── users/ # Пользователи и аутентификация
+   │ │ ├── materials/ # Учёт строительных материалов
+   │ │ ├── production/ # Производство пескоблоков
+   │ │ ├── orders/ # Управление заказами
+   │ │ ├── employees/ # Данные работников
+   │ │ └── analytics/ # Аналитика и отчёты
+   │ ├── backend/ # Настройки Django (settings, urls)
+   │ └── telegram_bot/ # Интеграция с Telegram
+   │
+   ├── frontend/ # React-приложение
+   │ ├── public/ # Статические файлы (HTML, favicon)
+   │ └── src/ # Исходный код фронтенда
+   │ ├── components/ # React-компоненты (кнопки, формы)
+   │ ├── pages/ # Страницы приложения
+   │ ├── services/ # API-клиенты (axios, запросы к бэкенду)
+   │ └── store/ # Redux-хранилище (состояние приложения)
+   │
+   └── docker-compose.yml # Конфигурация Docker
