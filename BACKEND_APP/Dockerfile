@@ -30,10 +30,10 @@ WORKDIR $PYSETUP_PATH
 COPY poetry.lock pyproject.toml ./
 
 # Уст зависимостей
-RUN poetry install --no-dev
+RUN poetry install --without dev --no-root
 
 COPY . /app/
 WORKDIR /app
 
 # Запуск
-CMD ["python", "manage.py", "runserver", "0.0.0.8000"]
+CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]

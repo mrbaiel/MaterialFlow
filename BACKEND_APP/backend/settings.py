@@ -43,6 +43,7 @@ LOCAL_APPS = [
     "apps.materials",
     "apps.orders",
     "apps.production",
+    "apps.analytics",
 ]
 
 INSTALLED_APPS = [*CORE_APPS, *THIRD_PARTY_APPS, *LOCAL_APPS]
@@ -82,11 +83,11 @@ WSGI_APPLICATION = "backend.wsgi.application"
 DATABASES = {
     "default": {
         'ENGINE': 'django.db.backends.postgresql',
-        "NAME": os.getenv("NAME"),
-        "DB_USER": os.getenv("DB_USER"),
-        "DB_PASSWORD": os.getenv("DB_PASSWORD"),
-        "DB_HOST": os.getenv("DB_HOST"),
-        "DB_PORT": os.getenv("DB_PORT", '5432'),
+        "NAME": os.getenv("DB_NAME"),
+        "USER": os.getenv("DB_USER"),
+        "PASSWORD": os.getenv("DB_PASSWORD"),
+        "HOST": os.getenv("DB_HOST"),
+        "PORT": os.getenv("DB_PORT", '5432'),
     }
 }
 
