@@ -43,7 +43,7 @@ class ProductionBatch(models.Model):
     product = models.ForeignKey(
         Product,
         on_delete= models.CASCADE,
-        verbose_name="Дата создания"
+        verbose_name="Категория"
     )
     quantity = models.PositiveIntegerField(verbose_name="Количество (шт)")
     production_date = models.DateField(verbose_name="Дата производства")
@@ -73,7 +73,7 @@ class SubBatch(models.Model):
         verbose_name="Партия",
     )
     quantity = models.PositiveIntegerField(verbose_name="Количество (шт)")
-    employees = models.ManyToManyField(Employees, verbose_name="Сотрудники")
+    employees = models.ManyToManyField("employees.Employees", verbose_name="Сотрудники")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
 
     class Meta:

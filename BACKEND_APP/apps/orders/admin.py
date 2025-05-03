@@ -9,19 +9,21 @@ class ClientAdmin(admin.ModelAdmin):
     search_fields = ('first_name', 'last_name')
     ordering = ('first_name',)
 
+
+class OrderItemInline(admin.TabularInline):
+    model = OrderItem
+    extra = 1
+
+
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
     list_display = ( 'id', 'client', 'quantity', 'total_price',
-                    'advance_price', 'payment_status', 'order_date'
+                    'advance_payment', 'payment_status', 'order_date'
                     )
     list_filter = ('payment_status', 'status', 'order_date')
-    search_fields = ('client__name',)
+    search_fields = ('client__first_name',)
     date_hierarchy = 'order_date'
-    inlines = ['OrderItemInline']
-
-    class OrderItemInline(admin.TabularInline):
-        model = OrderItem
-        extra = 1
+    inlines = [OrderItemInline]
 
 
 @admin.register(OrderItem)

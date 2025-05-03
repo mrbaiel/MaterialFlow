@@ -109,7 +109,7 @@ class OrderItem(models.Model):
         расчитываем price как кол * стоимость одной штуки
         """
         self.price = self.quantity * self.product.price_per_unit
-        super().save(*args, *kwargs)
+        super().save(*args, **kwargs)
 
 
 class Payment(models.Model):
