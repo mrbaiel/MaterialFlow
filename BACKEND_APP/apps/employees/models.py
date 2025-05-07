@@ -7,8 +7,8 @@ from django.core.validators import MinValueValidator
 class Employees(models.Model):
     first_name = models.CharField(max_length=50, verbose_name="Имя")
     last_name = models.CharField(max_length=50, verbose_name="Фамилия")
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Добавлен")
     phone = models.CharField(max_length=14, blank=True, verbose_name="Номер телефона")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Добавлен")
 
     class Meta:
         verbose_name = "Сотрудник"
@@ -28,7 +28,7 @@ class Salary(models.Model):
         ("paid", "Оплачено")
     )
 
-    employee = models.ForeignKey("employees.Employees", on_delete=models.CASCADE, verbose_name="Работник")
+    employee = models.ForeignKey("employees.Employees", on_delete=models.CASCADE, verbose_name="Сотрудник")
     sub_batch = models.ForeignKey("production.SubBatch", on_delete=models.CASCADE, verbose_name="Подпартия")
     amount = models.DecimalField(max_digits=12, decimal_places=2, validators=[MinValueValidator(0)], verbose_name="Сумма")
     paid_date = models.DateField(verbose_name="Дата выплаты", null=True, blank=True)

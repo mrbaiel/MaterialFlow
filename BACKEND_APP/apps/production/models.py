@@ -85,17 +85,14 @@ class SubBatch(models.Model):
 
     def clean(self):
         """
-        Проверяет чтобы кол подпартий не превышало кол партии
+        Проверяет, что сумма подпартий не превышает партию.
         """
-        existing_quantity = (
-            SubBatch.objects
-            .filter(production_batch=self.production_batch)
-            .exclude(pk=self.pk)
-            .aggregate(total=Sum('quantity'))['total'] or 0
-        )
-        existing_quantity += self.quantity
+        if self.quantity < 0: raise ValidationError('Количество не может быть отрицательным.')
+        if self.production_batch:
+            total_subbatch_quantity = SubBatch.objects.filter(production_batch=self.production_batch).exclude(pk=self.pk).aggregate(models.Sum('quantity'))['quantity__sum'] or 0
+            if total_subbatch_quantity + self.quantity > self.production_batch.quantity:
+                raise ValidationError('Сумма количества подпартий превышает количество партии.')
 
-        if existing_quantity > self.production_batch.quantity:
-            raise ValidationError(
-                "Сумма количества подпартий превышает количество партии"
-            )
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)

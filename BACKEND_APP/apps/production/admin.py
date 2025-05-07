@@ -20,7 +20,7 @@ class ProductForm(forms.ModelForm):
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
     form = ProductForm
-    list_display = ('name', 'is_colored', 'price_per_unit', 'block_rate')
+    list_display = ('name', 'price_per_unit',"color_type", 'block_rate')
     list_filter = ('is_colored',)
     search_fields = ('name', 'color_type')
     list_editable = ('price_per_unit', 'block_rate')
@@ -45,11 +45,14 @@ class ProductionBatchAdmin(admin.ModelAdmin):
 
 @admin.register(SubBatch)
 class SubBatchAdmin(admin.ModelAdmin):
-    list_display = ('production_batch', 'quantity', 'employee_count', 'created_at')
+    list_display = ('production_batch', 'quantity', 'created_at')
     list_filter = ('production_batch__production_date',)
-    search_fields = ('production_batch__product__name',)
     filter_horizontal = ('employees',)
 
     def employee_count(self, obj):
         return obj.employees.count()
     employee_count.short_description = "Число сотрудников"
+
+    def save_related(self, request, form, formsets, change):
+        super().save_related(request, form, formsets, change)
+        form.instance.save()
