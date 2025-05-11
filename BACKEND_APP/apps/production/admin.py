@@ -1,4 +1,5 @@
 from django.contrib import admin
+from unfold.admin import ModelAdmin
 from django import forms
 from apps.production.models import Product, ProductionBatch, SubBatch
 
@@ -18,7 +19,7 @@ class ProductForm(forms.ModelForm):
 
 
 @admin.register(Product)
-class ProductAdmin(admin.ModelAdmin):
+class ProductAdmin(ModelAdmin):
     form = ProductForm
     list_display = ('name', 'price_per_unit',"color_type", 'block_rate')
     list_filter = ('is_colored',)
@@ -35,7 +36,7 @@ class ProductAdmin(admin.ModelAdmin):
 
 
 @admin.register(ProductionBatch)
-class ProductionBatchAdmin(admin.ModelAdmin):
+class ProductionBatchAdmin(ModelAdmin):
     list_display = ('product', 'quantity', 'production_date', 'created_at')
     list_filter = ('product', 'production_date')
     search_fields = ('product__name',)
@@ -44,7 +45,7 @@ class ProductionBatchAdmin(admin.ModelAdmin):
 
 
 @admin.register(SubBatch)
-class SubBatchAdmin(admin.ModelAdmin):
+class SubBatchAdmin(ModelAdmin):
     list_display = ('production_batch', 'quantity', 'created_at')
     list_filter = ('production_batch__production_date',)
     filter_horizontal = ('employees',)

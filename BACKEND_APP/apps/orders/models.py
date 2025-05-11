@@ -32,10 +32,11 @@ class Order(models.Model):
     client = models.ForeignKey(Client, on_delete=models.CASCADE, verbose_name="Клиент")
     quantity = models.PositiveIntegerField(verbose_name="Общее количество")
     total_price = models.DecimalField(max_digits=12,
-                                      decimal_places=2,
-                                      validators=[MinValueValidator(0)],
-                                      verbose_name="Общая стоимость"
-                                      )
+                                    decimal_places=2,
+                                    default=0,
+                                    validators=[MinValueValidator(0)],
+                                    verbose_name="Общая стоимость"
+                                     )
     advance_payment = models.DecimalField(max_digits=12,
                                           decimal_places=2,
                                           validators=[MinValueValidator(0)],

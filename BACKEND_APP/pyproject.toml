@@ -20,6 +20,7 @@ numpy = "^2.2.5"
 python-telegram-bot = "^22.0"
 drf-yasg = "^1.21.10"
 django-extensions = "^4.1"
+django-unfold = "^0.56.0"
 
 
 [tool.poetry.group.dev.dependencies]
