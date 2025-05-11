@@ -1,0 +1,47 @@
+{% extends "admin/change_list.html" %}
+{% block result_list %}
+  {{ block.super }}
+  <h3>Итоги по сотрудникам</h3>
+  {% if paid_total %}
+    <h4>Оплачено</h4>
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Сотрудник_____</th>
+          <th>Общая зарплата (сом)</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in paid_total %}
+          <tr>
+            <td>{{ item.employee__first_name }}</td>
+            <td>{{ item.total|floatformat:2 }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p>Нет оплаченных зарплат                 </p>
+  {% endif %}
+  {% if not_paid_total %}
+    <h4>Не оплачено</h4>
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Сотрудник_____</th>
+          <th>Общая зарплата (сом)</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in not_paid_total %}
+          <tr>
+            <td>{{ item.employee__first_name }}</td>
+            <td>{{ item.total|floatformat:2 }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p>Нет неоплаченных зарплат.</p>
+  {% endif %}
+{% endblock %}

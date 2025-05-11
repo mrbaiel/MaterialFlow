@@ -20,7 +20,6 @@ ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS").split(",")
 # Application definition
 
 CORE_APPS = [
-    "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
@@ -43,9 +42,21 @@ LOCAL_APPS = [
     "apps.materials",
     "apps.orders",
     "apps.production",
+    "apps.analytics",
 ]
 
-INSTALLED_APPS = [*CORE_APPS, *THIRD_PARTY_APPS, *LOCAL_APPS]
+UNFOLD_APP = [
+    "unfold",  # before django.contrib.admin
+    "unfold.contrib.filters",  # optional, if special filters are needed
+    "unfold.contrib.forms",  # optional, if special form elements are needed
+    "unfold.contrib.inlines",  # optional, if special inlines are needed
+    "unfold.contrib.import_export",  # optional, if django-import-export package is used
+    "unfold.contrib.guardian",  # optional, if django-guardian package is used
+    "unfold.contrib.simple_history",  # optional, if django-simple-history package is used
+    "django.contrib.admin",
+]
+
+INSTALLED_APPS = [*CORE_APPS, *UNFOLD_APP, *THIRD_PARTY_APPS, *LOCAL_APPS, ]
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -57,12 +68,21 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
+UNFOLD = {
+    "SITE_TITLE": "MatFlow",
+    "SITE_HEADER": "MatFlow",
+    "SITE_ICON": None,
+    "SHOW_COUNTS": True,
+    "SHOW_ACTIONS": True,
+    "INCLUDE_JQUERY": True,
+}
+
 ROOT_URLCONF = "backend.urls"
 
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
+        "DIRS": [BASE_DIR / 'templates'],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -82,11 +102,11 @@ WSGI_APPLICATION = "backend.wsgi.application"
 DATABASES = {
     "default": {
         'ENGINE': 'django.db.backends.postgresql',
-        "NAME": os.getenv("NAME"),
-        "DB_USER": os.getenv("DB_USER"),
-        "DB_PASSWORD": os.getenv("DB_PASSWORD"),
-        "DB_HOST": os.getenv("DB_HOST"),
-        "DB_PORT": os.getenv("DB_PORT", '5432'),
+        "NAME": os.getenv("DB_NAME"),
+        "USER": os.getenv("DB_USER"),
+        "PASSWORD": os.getenv("DB_PASSWORD"),
+        "HOST": os.getenv("DB_HOST"),
+        "PORT": os.getenv("DB_PORT", '5432'),
     }
 }
 
@@ -146,3 +166,24 @@ AUTH_USER_MODEL = "users.User"
 # Default primary key field type
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+        'file': {
+            'class': 'logging.FileHandler',
+            'filename': 'debug.log',
+        },
+    },
+    'loggers': {
+        '': {
+            'handlers': ['console', 'file'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+    },
+}

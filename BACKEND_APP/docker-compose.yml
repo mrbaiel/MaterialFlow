@@ -5,9 +5,9 @@ services:
     image: postgres:16
     container_name: postgres16
     volumes:
-      - postgres_data
+      - postgres_data:/var/lib/postgresql/data
     env_file:
-      - ./.env
+      - .env
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
@@ -15,7 +15,7 @@ services:
       POSTGRES_HOST: ${POSTGRES_HOST}
       POSTGRES_PORT: ${POSTGRES_PORT}
     ports:
-      - "5432:5432"
+      - "5433:5432"
   backend:
     build: .
     restart: always
@@ -27,8 +27,6 @@ services:
       - .:/app
     ports:
       - "8000:8000"
-    command:
-      - sh -c "python manage.py migrate &&
-               python manage.py runserver 0.0.0.0.8000"
+
 volumes:
   postgres_data:
