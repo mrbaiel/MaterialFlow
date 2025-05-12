@@ -36,4 +36,4 @@ COPY . /app/
 WORKDIR /app
 
 # Запуск
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+CMD ["python", "manage.py", "runserver", "0.0.0.0:8008"]

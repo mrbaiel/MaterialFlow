@@ -3,5 +3,6 @@ MATERIAL_TYPES = (
     ("GRAVEL", "Щебень"),
     ("CEMENT", "Цемент"),
     ("FINE SAND", "Измельченный песок"),
+    ("PAINT", "Краска"),
 )
 

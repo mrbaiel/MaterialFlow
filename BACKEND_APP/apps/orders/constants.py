@@ -1,6 +1,5 @@
 PAYMENT_STATUS_CHOICES = (
     ("pending", "Ожидания оплаты"),
-    ("advance", "Аванс"),
     ("partial", "Частично"),
     ("paid", "Оплачено"),
 )

@@ -1,6 +1,8 @@
+from dataclasses import fields
+
 from django.db import models
 from django.core.validators import MinValueValidator
-# from django.core.exceptions import ValidationError
+from django.core.exceptions import ValidationError
 
 from apps.orders.constants import PAYMENT_STATUS_CHOICES, ORDER_STATUS_CHOICES
 from apps.production.models import Product
@@ -30,18 +32,18 @@ class Order(models.Model):
     хранит клиента, общее кол, стоимость, аванс, статусы заказа и оплаты
     """
     client = models.ForeignKey(Client, on_delete=models.CASCADE, verbose_name="Клиент")
-    quantity = models.PositiveIntegerField(verbose_name="Общее количество")
+    quantity = models.PositiveIntegerField(default=0, verbose_name="Общее количество")
     total_price = models.DecimalField(max_digits=12,
-                                    decimal_places=2,
-                                    default=0,
-                                    validators=[MinValueValidator(0)],
-                                    verbose_name="Общая стоимость"
-                                     )
-    advance_payment = models.DecimalField(max_digits=12,
+                                      decimal_places=2,
+                                      default=0,
+                                      validators=[MinValueValidator(0)],
+                                      verbose_name="Общая стоимость"
+                                      )
+    initial_payment = models.DecimalField(max_digits=12,
                                           decimal_places=2,
                                           validators=[MinValueValidator(0)],
                                           default=0,
-                                          verbose_name="Аванс"
+                                          verbose_name="Частичная оплата",
                                           )
     payment_status = models.CharField(max_length=20,
                                       choices=PAYMENT_STATUS_CHOICES,
@@ -64,26 +66,27 @@ class Order(models.Model):
         ]
 
     def __str__(self):
-        return f"Заказ {self.id} ({self.client}, {self.order_date})"
+        return f"{self.id}. {self.client} ({self.order_date})"
 
-    # def clean(self):
-    #     """
-    #     Проверяет, что аванс не превышает общей стоимости.
-    #     Проверяет, что quantity равно сумме OrderItem.quantity.
-    #     """
-    #     if self.advance_payment > self.total_price:
-    #         raise ValidationError('Аванс не может превышать общую стоимость.')
-    #     items_quantity = self.orderitem_set.aggregate(
-    #         models.Sum('quantity')
-    #     )['quantity__sum'] or 0
-    #     if items_quantity != self.quantity:
-    #         raise ValidationError(
-    #             'Общее количество заказа не равно сумме позиций.'
-    #         )
-    # def save(self, *args, **kwargs):
-    #     self.full_clean()
-    #     super().save(*args, **kwargs)
-    #
+    @property
+    def remaining_payment(self):
+        """
+        Вычитаем остаток к оплате   общая стоимость - сумма всех платежей
+        """
+        total_payments = self.payment_set.aggregate(total=models.Sum('amount'))['total'] or 0
+        return max(0, self.total_price - total_payments)
+    remaining_payment.fget.short_description = "Остаток к оплате"
+
+    def clean(self):
+        """
+        Проверяет, что initial_payment не превышает total_price
+        """
+        if self.total_price and self.initial_payment > self.total_price:
+            raise ValidationError(f"Частичная оплата ({self.initial_payment}) не может превышать общую стоимость {self.total_price}")
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
 
 class OrderItem(models.Model):
     """
@@ -98,6 +101,7 @@ class OrderItem(models.Model):
                                 validators=[MinValueValidator(0)],
                                 verbose_name="Стоимость",
                                 )
+
     class Meta:
         verbose_name = "Позиция заказа"
         verbose_name_plural = "Позиции заказа"
@@ -115,7 +119,7 @@ class OrderItem(models.Model):
 
 class Payment(models.Model):
     """
-    моедль для учета платежей (аванс и окончательый платеж)
+    модель для учета платежей (аванс и окончательый платеж)
     хранит: сумму, дату платежа и дату создания
     """
     order = models.ForeignKey(Order, on_delete=models.CASCADE, verbose_name="Заказ")
@@ -126,6 +130,7 @@ class Payment(models.Model):
                                  )
     payment_date = models.DateField(verbose_name="Дата платежа")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
+    updated_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата обновления")
 
     class Meta:
         verbose_name = "Платеж"
@@ -136,3 +141,14 @@ class Payment(models.Model):
 
     def __str__(self):
         return f"Платеж {self.amount} для {self.order}"
+
+    def clean(self):
+        """
+        проверка на то что сумма платежа не превышает остаток к оплате
+        """
+        if not self.order:
+            return
+        existing_payments = self.order.payment_set.exclude(pk=self.pk).aggregate(total=models.Sum('amount'))['total'] or 0
+        remaining = self.order.total_price - existing_payments
+        if self.amount > remaining:
+            raise ValidationError(f"Сумма платежа {self.amount} превышает остаток к оплате ({remaining})")

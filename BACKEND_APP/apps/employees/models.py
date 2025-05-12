@@ -8,6 +8,7 @@ class Employees(models.Model):
     first_name = models.CharField(max_length=50, verbose_name="Имя")
     last_name = models.CharField(max_length=50, verbose_name="Фамилия")
     phone = models.CharField(max_length=14, blank=True, verbose_name="Номер телефона")
+    address = models.CharField(max_length=50, blank=True, null=True, verbose_name="Адрес сотрудника")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Добавлен")
 
     class Meta:
