@@ -16,6 +16,11 @@ class User(AbstractUser):
                             default='admin',
                             verbose_name="Роль"
                             )
+    telegram_id = models.CharField(max_length=50,
+                                   blank=True,
+                                   null=True,
+                                   verbose_name="Telegram ID",
+                                   )
 
     class Meta:
         verbose_name = "Пользователь"

@@ -1,0 +1,332 @@
+apps/employees/admin.py
+
+import logging
+
+from django.contrib import admin
+from unfold.admin import ModelAdmin
+
+from apps.employees.models import Employees, Salary
+from apps.employees.utils import generate_salary_report, get_salary_totals
+
+logger = logging.getLogger(__name__)
+
+
+@admin.register(Employees)
+class EmployeesAdmin(ModelAdmin):
+    list_display = ('first_name', 'last_name', 'phone', 'created_at')
+    search_fields = ('first_name', 'last_name')
+    ordering = ('first_name',)
+
+@admin.register(Salary)
+class SalaryAdmin(ModelAdmin):
+    list_display = ('employee', 'amount', 'calculation_date', 'payment_status', 'paid_date')
+    list_filter = ('employee', 'calculation_date', 'payment_status')
+    search_fields = ('employee__first_name', 'employee__last_name')
+    list_per_page = 15
+    date_hierarchy = 'calculation_date'
+    actions = ['export_salary_report', "mark_as_test"]
+
+    def get_queryset(self, request):
+        queryset = super().get_queryset(request)
+        queryset = queryset.select_related('employee', 'sub_batch')
+        return queryset
+
+    def changelist_view(self, request, extra_context=None):
+        extra_context = extra_context or {}
+        queryset = self.get_queryset(request)
+        totals = get_salary_totals(queryset)
+        extra_context.update(totals)
+        return super().changelist_view(request, extra_context=extra_context)
+
+    def export_salary_report(self, request, queryset):
+        return generate_salary_report(queryset)
+    export_salary_report.short_description = "Экспортировать отчёт по зарплате"
+
+apps/employees/signals.py
+
+from datetime import date
+
+from django.dispatch import receiver
+from django.db.models.signals import post_save
+
+from apps.employees.models import Salary
+from apps.production.models import SubBatch
+
+import logging
+
+logger = logging.getLogger(__name__)
+
+#TODO debug signal
+@receiver(post_save, sender = SubBatch)
+def create_salary_records(sender, instance, created, **kwargs):
+    """
+    сигнал для создания записи Salary для каждого сотрудника при сохранении SubBatch
+    """
+    logger.info(f"Сигнал post_save для SubBatch #{instance.id}, created={created}")
+    employees = instance.employees.all()
+    logger.info(f"Найдено сотрудников: {len(employees)}")
+    if employees:
+        try:
+            existing_salaries = Salary.objects.filter(sub_batch=instance).count()
+            if existing_salaries == 0:
+                amount = (instance.quantity * instance.production_batch.product.block_rate) / len(employees)
+                amount = round(amount,2)
+
+                logger.info(f"Рассчитана зарплата: {amount} сом на сотрудника")
+                for employee in employees:
+                    Salary.objects.create(
+                        employee=employee,
+                        sub_batch=instance,
+                        amount=amount,
+                        calculation_date=instance.production_batch.production_date,
+                    )
+                    logger.info(f"Создана запись Salary для {employee} - {amount}сом")
+            else:
+                logger.info("Записи Salary уже существуют, пропускаем")
+        except Exception as e:
+            logger.error(f"Ошибка при создании Salary: {str(e)}")
+    else:
+        logger.warning("Нет сотрудников в подпартии, записи Salary не созданы")
+
+@receiver(post_save, sender=Salary)
+def update_paid_date(sender, instance, created, **kwargs):
+    """
+    сигнал для установки текущей даты при изменении статуса оплаты зп сотруднику
+    """
+    if instance.payment_status == 'paid' and instance.paid_date is None:
+        instance.paid_date = date.today()
+        instance.save()
+        logger.info(f"Дата выплаты для {instance.employee.first_name} - {instance.paid_date}")
+
+apps/materials/admin.py
+from django.contrib import admin
+from unfold.admin import ModelAdmin
+
+from apps.materials.models import Material
+
+@admin.register(Material)
+class MaterialAdmin(ModelAdmin):
+    list_display = ("name", "quantity", "delivery_date", "created_at")
+    list_filter = ("name", "delivery_date")
+    search_fields = ("name",)
+    date_hierarchy = "delivery_date"
+    ordering = ("-delivery_date",)
+
+
+apps/orders/admin.py
+from django.contrib import admin
+from unfold.admin import ModelAdmin
+
+from apps.orders.models import Client, Order, OrderItem, Payment
+
+
+class OrderItemInline(admin.TabularInline):
+    model = OrderItem
+    extra = 1
+    fields = ('product', 'quantity', 'price')
+    readonly_fields = ('price',)
+    ordering = ('-id',)
+
+
+class PaymentInline(admin.TabularInline):
+    model = Payment
+    extra = 1
+    fields = ('amount', 'payment_date')
+
+
+@admin.register(Client)
+class ClientAdmin(ModelAdmin):
+    list_display = ('first_name', 'last_name', 'phone', 'created_at')
+    search_fields = ('first_name', 'last_name')
+    ordering = ('-created_at',)
+    list_per_page = 30
+
+
+@admin.register(Order)
+class OrderAdmin(ModelAdmin):
+    list_display = ('id', 'client', 'quantity', 'total_price',
+                    'payment_status', 'order_date',
+                    'remaining_payment',
+                    )
+    list_filter = ('payment_status', 'status', 'order_date')
+    search_fields = ('client__first_name', 'client__last_name')
+    date_hierarchy = 'order_date'
+    inlines = [OrderItemInline]
+    ordering = ('-id',)
+    readonly_fields = ('total_price', 'quantity', 'payment_status', 'remaining_payment',)
+    fields = ('client', 'quantity', 'payment_status', 'order_date', 'status', 'total_price')
+
+
+# @admin.register(OrderItem)
+# class OrderItemAdmin(ModelAdmin):
+#     list_display = ('order', 'product', 'quantity', 'price')
+#     list_filter = ('product',)
+#     search_fields = ('order__client__name', 'product__name')
+
+
+@admin.register(Payment)
+class PaymentAdmin(ModelAdmin):
+    list_display = ('order', 'amount', 'payment_date', 'created_at',)
+    list_filter = ('payment_date', )
+    search_fields = ('order__client__name',)
+    date_hierarchy = 'payment_date'
+    fields = ('order', 'amount', 'payment_date', )
+    list_per_page = 30
+
+
+apps/orders/signals.py
+from Tools.demo.mcast import sender
+from django.db.models.signals import post_save, post_delete
+from django.dispatch import receiver
+from django.db import models, transaction
+
+from apps.orders.models import OrderItem, Order, Payment
+
+
+@receiver([post_save, post_delete], sender=OrderItem)
+@receiver(post_save, sender=Order)
+def update_total_price(sender, instance, **kwargs):
+    """
+    обновляем total_price в Order при создании/обновлении Order или OrderItem,
+    а также при удалении OrderItem
+    """
+    if sender == OrderItem:
+        order = instance.order
+    else:
+        order = instance
+    total_price = order.orderitem_set.aggregate(total=models.Sum('price'))['total'] or 0
+    total_quantity = order.orderitem_set.aggregate(total=models.Sum('quantity'))['total'] or 0
+    Order.objects.filter(pk=order.pk).update(total_price=total_price, quantity=total_quantity)
+
+
+@receiver(post_save, sender=Order)
+def handle_initial_payment(sender, instance, **kwargs):
+    """
+    создаем или обновляем платеж для initial_payment при c/u Order
+    """
+    created = kwargs.get('created', False)
+    if instance.initial_payment > 0:
+        with transaction.atomic():
+            existing_payment = instance.payment_set.filter(payment_data=instance.order_date,
+                                                           created_at__gte=instance.created_at).first()
+
+            if created and not existing_payment:
+                # Новый заказ, создаём платёж
+                Payment.objects.create(
+                    order=instance,
+                    amount=instance.initial_payment,
+                    payment_date=instance.order_date
+                )
+            elif existing_payment and existing_payment.amount != instance.initial_payment:
+                existing_payment.amount = instance.initial_payment
+                existing_payment.save()
+
+
+@receiver([post_save, post_delete], sender=Payment)
+def update_payment_status(sender, instance, **kwargs):
+    """
+    обновляем payment_status в Order и for_payment в Payment при crud
+    """
+    order = instance.order
+
+    with transaction.atomic():
+        total_payments = order.payment_set.aggregate(total=models.Sum('amount'))['total'] or 0
+        if total_payments >= order.total_price:
+            payment_status = "paid"
+        elif total_payments > 0:
+            payment_status = "partial"
+        else:
+            payment_status = "pending"
+
+        Order.objects.filter(pk=order.pk).update(payment_status=payment_status)
+
+
+apps/production/admin.py
+from django.contrib import admin
+from unfold.admin import ModelAdmin
+from django import forms
+from apps.production.models import Product, ProductionBatch, SubBatch
+
+
+class ProductForm(forms.ModelForm):
+    """
+    форма которая скрывает color_type если is colored = False
+    """
+    class Meta:
+        model = Product
+        fields = "__all__"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not self.instance.is_colored:
+            self.fields['color_type'].widget = forms.HiddenInput()
+
+
+@admin.register(Product)
+class ProductAdmin(ModelAdmin):
+    form = ProductForm
+    list_display = ('name', 'price_per_unit',"color_type", 'block_rate')
+    list_filter = ('is_colored',)
+    search_fields = ('name', 'color_type')
+    list_editable = ('price_per_unit', 'block_rate')
+    fieldsets = (
+        (None, {
+            'fields': ('name', 'price_per_unit', 'block_rate')
+        }),
+        ('Характеристики', {
+            'fields': ('is_colored', 'color_type')
+        }),
+    )
+
+
+@admin.register(ProductionBatch)
+class ProductionBatchAdmin(ModelAdmin):
+    list_display = ('product', 'quantity', 'production_date', 'created_at')
+    list_filter = ('product', 'production_date')
+    search_fields = ('product__name',)
+    date_hierarchy = 'production_date'
+    ordering = ('-production_date',)
+
+
+@admin.register(SubBatch)
+class SubBatchAdmin(ModelAdmin):
+    list_display = ('production_batch', 'quantity', 'created_at')
+    list_filter = ('production_batch__production_date',)
+    filter_horizontal = ('employees',)
+
+    def employee_count(self, obj):
+        return obj.employees.count()
+    employee_count.short_description = "Число сотрудников"
+
+    def save_related(self, request, form, formsets, change):
+        super().save_related(request, form, formsets, change)
+        form.instance.save()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Разработка веб-приложения для ведения учета на производственном предприятии

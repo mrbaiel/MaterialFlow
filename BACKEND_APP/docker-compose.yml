@@ -28,5 +28,18 @@ services:
     ports:
       - "8008:8008"
 
+  tg_bot:
+    build:
+      context: .
+    restart: always
+    depends_on:
+      - db
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+    command:
+      - poetry run python -m telegram_bot.bot
+
 volumes:
   postgres_data:

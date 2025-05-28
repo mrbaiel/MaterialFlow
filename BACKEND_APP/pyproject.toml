@@ -17,10 +17,11 @@ django-filter = "^25.1"
 djangorestframework-simplejwt = "^5.5.0"
 pandas = "^2.2.3"
 numpy = "^2.2.5"
-python-telegram-bot = "^22.0"
 drf-yasg = "^1.21.10"
 django-extensions = "^4.1"
 django-unfold = "^0.56.0"
+celery = "^5.5.2"
+aiogram = "^3.4"
 
 
 [tool.poetry.group.dev.dependencies]

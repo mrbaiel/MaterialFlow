@@ -1,0 +1,385 @@
+приложение apps/employees.models:
+
+from django.core.exceptions import ValidationError
+from django.db import models
+from django.core.validators import MinValueValidator
+
+
+
+class Employees(models.Model):
+    first_name = models.CharField(max_length=50, verbose_name="Имя")
+    last_name = models.CharField(max_length=50, verbose_name="Фамилия")
+    phone = models.CharField(max_length=14, blank=True, verbose_name="Номер телефона")
+    address = models.CharField(max_length=50, blank=True, null=True, verbose_name="Адрес сотрудника")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Добавлен")
+
+    class Meta:
+        verbose_name = "Сотрудник"
+        verbose_name_plural = "Сотрудники"
+
+    def __str__(self):
+        return self.first_name
+
+
+class Salary(models.Model):
+    """
+    моделька для расчета зп
+    хранит начисления по подпартиям, статус, и дату выплаты
+    """
+    PAYMENT_CHOICES = (
+        ("not paid", "Не оплачено"),
+        ("paid", "Оплачено")
+    )
+
+    employee = models.ForeignKey("employees.Employees", on_delete=models.CASCADE, verbose_name="Сотрудник")
+    sub_batch = models.ForeignKey("production.SubBatch", on_delete=models.CASCADE, verbose_name="Подпартия")
+    amount = models.DecimalField(max_digits=12, decimal_places=2, validators=[MinValueValidator(0)], verbose_name="Сумма")
+    paid_date = models.DateField(verbose_name="Дата выплаты", null=True, blank=True)
+    payment_status = models.CharField(choices=PAYMENT_CHOICES, max_length=15, default="not paid", verbose_name="Статус оплаты")
+    calculation_date = models.DateField(verbose_name="Дата расчета")
+    created_at = models.DateField(auto_now_add=True, verbose_name="Дата создания")
+
+    class Meta:
+        verbose_name = "Зарплата"
+        verbose_name_plural = "Зарплаты"
+        indexes = [
+            models.Index(fields=["paid_date"]),
+            models.Index(fields=["employee", "paid_date"])
+        ]
+
+    def __str__(self):
+        return f"{self.employee} - {self.amount}сом"
+
+    def clean(self):
+        """
+         проверка того что сотрудник участвовал в подпартии
+        """
+        from apps.production.models import SubBatch
+        if isinstance(self.sub_batch, SubBatch):
+            if self.employee not in self.sub_batch.employees.all():
+                raise ValidationError("Работник не участовал в этой подпартии")
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+
+приложение apps/materials.models:
+from django.db import models
+from django.core.validators import MinValueValidator
+
+from apps.materials.constants import MATERIAL_TYPES
+
+
+class Material(models.Model):
+    """
+    Учет поставок сырья
+    """
+    name = models.CharField(max_length=50, choices=MATERIAL_TYPES, verbose_name="Тип материала")
+    quantity = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        validators=[MinValueValidator(0)],
+        verbose_name="Количество (тонны)"
+    )
+    delivery_date = models.DateField(verbose_name="Дата поставки")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
+
+    class Meta:
+        verbose_name = "Материал"
+        verbose_name_plural = "Материалы"
+        indexes = [
+            models.Index(fields=["delivery_date"]),
+        ]
+
+    def __str__(self):
+        return f"{self.get_name_display()}, ({self.quantity} т)"
+
+приложение apps/orders.models:
+from dataclasses import fields
+
+from django.db import models
+from django.core.validators import MinValueValidator
+from django.core.exceptions import ValidationError
+
+from apps.orders.constants import PAYMENT_STATUS_CHOICES, ORDER_STATUS_CHOICES
+from apps.production.models import Product
+
+
+class Client(models.Model):
+    """
+    модель для учета клиентов
+    """
+    first_name = models.CharField(max_length=50, verbose_name="Имя")
+    last_name = models.CharField(max_length=50, verbose_name="Фамилия")
+    address = models.TextField(blank=True, verbose_name="Адрес")
+    phone = models.CharField(max_length=14, blank=True, verbose_name="Номер телефона")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
+
+    class Meta:
+        verbose_name = "Клиент"
+        verbose_name_plural = "Клиенты"
+
+    def __str__(self):
+        return self.first_name
+
+
+class Order(models.Model):
+    """
+    модель для учета заказов
+    хранит клиента, общее кол, стоимость, аванс, статусы заказа и оплаты
+    """
+    client = models.ForeignKey(Client, on_delete=models.CASCADE, verbose_name="Клиент")
+    quantity = models.PositiveIntegerField(default=0, verbose_name="Общее количество")
+    total_price = models.DecimalField(max_digits=12,
+                                      decimal_places=2,
+                                      default=0,
+                                      validators=[MinValueValidator(0)],
+                                      verbose_name="Общая стоимость"
+                                      )
+    initial_payment = models.DecimalField(max_digits=12,
+                                          decimal_places=2,
+                                          validators=[MinValueValidator(0)],
+                                          default=0,
+                                          verbose_name="Частичная оплата",
+                                          )
+    payment_status = models.CharField(max_length=20,
+                                      choices=PAYMENT_STATUS_CHOICES,
+                                      default="pending",
+                                      verbose_name="Статус оплаты"
+                                      )
+    order_date = models.DateField(verbose_name="Дата заказа")
+    status = models.CharField(max_length=10,
+                              choices=ORDER_STATUS_CHOICES,
+                              default="pending",
+                              verbose_name="Статус заказа"
+                              )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
+
+    class Meta:
+        verbose_name = "Заказ"
+        verbose_name_plural = "Заказы"
+        indexes = [
+            models.Index(fields=['order_date']),
+        ]
+
+    def __str__(self):
+        return f"{self.id}. {self.client} ({self.order_date})"
+
+    @property
+    def remaining_payment(self):
+        """
+        Вычитаем остаток к оплате   общая стоимость - сумма всех платежей
+        """
+        total_payments = self.payment_set.aggregate(total=models.Sum('amount'))['total'] or 0
+        return max(0, self.total_price - total_payments)
+    remaining_payment.fget.short_description = "Остаток к оплате"
+
+    def clean(self):
+        """
+        Проверяет, что initial_payment не превышает total_price
+        """
+        if self.total_price and self.initial_payment > self.total_price:
+            raise ValidationError(f"Частичная оплата ({self.initial_payment}) не может превышать общую стоимость {self.total_price}")
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+class OrderItem(models.Model):
+    """
+    модель для позиций заказа
+    хранит : заказ, продукт, кол и стоимость
+    """
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, verbose_name="Заказ")
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, verbose_name="Продукт")
+    quantity = models.PositiveIntegerField(verbose_name="Количество (шт)")
+    price = models.DecimalField(max_digits=12,
+                                decimal_places=2,
+                                validators=[MinValueValidator(0)],
+                                verbose_name="Стоимость",
+                                )
+
+    class Meta:
+        verbose_name = "Позиция заказа"
+        verbose_name_plural = "Позиции заказа"
+
+    def __str__(self):
+        return f"{self.product} ({self.quantity})шт"
+
+    def save(self, *args, **kwargs):
+        """
+        расчитываем price как кол * стоимость одной штуки
+        """
+        self.price = self.quantity * self.product.price_per_unit
+        super().save(*args, **kwargs)
+
+
+class Payment(models.Model):
+    """
+    модель для учета платежей (аванс и окончательый платеж)
+    хранит: сумму, дату платежа и дату создания
+    """
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, verbose_name="Заказ")
+    amount = models.DecimalField(max_digits=12,
+                                 decimal_places=2,
+                                 validators=[MinValueValidator(0)],
+                                 verbose_name="Сумма платежа",
+                                 )
+    payment_date = models.DateField(verbose_name="Дата платежа")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
+    updated_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата обновления")
+
+    class Meta:
+        verbose_name = "Платеж"
+        verbose_name_plural = "Платежи"
+        indexes = [
+            models.Index(fields=['payment_date']),
+        ]
+
+    def __str__(self):
+        return f"Платеж {self.amount} для {self.order}"
+
+    def clean(self):
+        """
+        проверка на то что сумма платежа не превышает остаток к оплате
+        """
+        if not self.order:
+            return
+        existing_payments = self.order.payment_set.exclude(pk=self.pk).aggregate(total=models.Sum('amount'))['total'] or 0
+        remaining = self.order.total_price - existing_payments
+        if self.amount > remaining:
+            raise ValidationError(f"Сумма платежа {self.amount} превышает остаток к оплате ({remaining})")
+
+приложение apps/production.models:
+from django.db import models
+from django.core.validators import MinValueValidator
+from django.db.models import Sum
+from django.core.exceptions import ValidationError
+
+from apps.employees.models import Employees
+
+
+class Product(models.Model):
+    """
+    Модель для видов пескоблока (20ки, 15ки, тумбы...)
+    """
+    name = models.CharField(max_length=100, verbose_name="Категория")
+    is_colored = models.BooleanField(default=False, verbose_name="Цветной")
+    color_type = models.CharField(max_length=50, blank=True, verbose_name="Тип цвета")
+    block_rate = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        validators=[MinValueValidator(0)],
+        verbose_name="Ставка за блок",
+    )
+    price_per_unit = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        validators=[MinValueValidator(0)],
+        verbose_name="Цена за БЛОК"
+    )
+
+    class Meta:
+        verbose_name = "Продукт"
+        verbose_name_plural = "Продукты"
+
+    def __str__(self):
+        color = f"{self.color_type}" if self.is_colored and self.color_type else ""
+        return f"{self.name} {color}"
+
+
+class ProductionBatch(models.Model):
+    """
+    Модель для учета производства
+    хранит тип блока, кол и дату
+    """
+    product = models.ForeignKey(
+        Product,
+        on_delete= models.CASCADE,
+        verbose_name="Категория"
+    )
+    quantity = models.PositiveIntegerField(verbose_name="Количество (шт)")
+    production_date = models.DateField(verbose_name="Дата производства")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
+
+    class Meta:
+        verbose_name = "Партия производства",
+        verbose_name_plural = "Партии производства"
+        indexes = [
+            models.Index(
+                fields=['production_date']
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.product} - {self.quantity}шт {self.production_date}"
+
+
+class SubBatch(models.Model):
+    """
+    Модель для подпартий
+    используется для расчета зп - Зарплата: (кол * ставка за штуку) / число_сотрудников)
+    """
+    production_batch = models.ForeignKey(
+        ProductionBatch,
+        on_delete=models.CASCADE,
+        verbose_name="Партия",
+    )
+    quantity = models.PositiveIntegerField(verbose_name="Количество (шт)")
+    employees = models.ManyToManyField("employees.Employees", verbose_name="Сотрудники")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
+
+    class Meta:
+        verbose_name = "Подпартия"
+        verbose_name_plural = "Подпартии"
+
+    def __str__(self):
+        return f"{self.production_batch} ({self.quantity})шт"
+
+    def clean(self):
+        """
+        Проверяет, что сумма подпартий не превышает партию.
+        """
+        if self.quantity < 0: raise ValidationError('Количество не может быть отрицательным.')
+        if self.production_batch:
+            total_subbatch_quantity = SubBatch.objects.filter(production_batch=self.production_batch).exclude(pk=self.pk).aggregate(models.Sum('quantity'))['quantity__sum'] or 0
+            if total_subbatch_quantity + self.quantity > self.production_batch.quantity:
+                raise ValidationError('Сумма количества подпартий превышает количество партии.')
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+
+приложение apps/users.models:
+from django.db import models
+from django.contrib.auth.models import AbstractUser
+
+class User(AbstractUser):
+    """
+    модель для пользователей
+    хранит: фио, пароль и роль
+    """
+    ROLE_CHOICES = (
+        ('developer', "Разработчик"),
+        ('owner', "Владелец"),
+        ('admin', 'Админ')
+    )
+    role = models.CharField(max_length=15,
+                            choices=ROLE_CHOICES,
+                            default='admin',
+                            verbose_name="Роль"
+                            )
+    telegram_id = models.CharField(max_length=50,
+                                   blank=True,
+                                   null=True,
+                                   verbose_name="Telegram ID",
+                                   )
+
+    class Meta:
+        verbose_name = "Пользователь"
+        verbose_name_plural = "Пользователи"
+
+    def __str__(self):
+        return self.first_name
