@@ -1,9 +1,6 @@
 from django.db import models
 from django.core.validators import MinValueValidator
-from django.db.models import Sum
 from django.core.exceptions import ValidationError
-
-from apps.employees.models import Employees
 
 
 class Product(models.Model):

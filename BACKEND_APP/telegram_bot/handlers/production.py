@@ -11,7 +11,7 @@ router = Router()
 
 @router.message(Command('add_batch'))
 async def add_batch_start(message: types.Message, state: FSMContext):
-    result, error = await make_api_request('GET', 'products/', token=config.API_TOKEN)
+    result, error = await make_api_request('GET', 'products/', state=state)
     if error:
         await send_error_message(message, error)
         return
@@ -80,7 +80,7 @@ async def add_batch_date(message: types.Message, state: FSMContext):
 
 @router.message(Command('add_subbatch'))
 async def add_subbatch_start(message: types.Message, state: FSMContext):
-    result, error = await make_api_request('GET', 'batches/?limit=10', token=config.API_TOKEN)
+    result, error = await make_api_request('GET', 'batches/?limit=10', state)
     print(f"{result} РЕЗУЛЬТАТ")
 
     if error:
