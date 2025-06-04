@@ -7,32 +7,28 @@ from telegram_bot import config
 
 logger = logging.getLogger(__name__)
 
-async def make_api_request(method, endpoint, data=None):
+async def make_api_request(method, endpoint, data=None, headers=None, payload=None):
     url = f"{config.API_URL}{endpoint}"
 
     logger.info(f"Запрос на {url}")
     logger.info(f"Данные {data}")
 
+    headers = headers.copy() if headers else {}
 
-    async with aiohttp.ClientSession() as session:
-        try:
-            async with session.request(method, url, json=data) as response:
-                text = await response.text()
+    try:
+        async with aiohttp.ClientSession() as session:
+            if method == "GET":
+                async with session.get(url, headers=headers)as resp:
+                    data = await resp.json()
+                    return data, None if resp.status < 400 else data
+            elif method == "POST":
+                async with session.post(url, headers=headers, json=data) as resp:
+                    data = await resp.json()
+                    return data, None if resp.status < 400 else data
 
-                if response.status >= 400:
-                    logger.error(f"[{response.status}] {method} {url} — {text}")
-                    return None, f"Ошибка API: {response.status}"
+    except Exception as e:
+        return None, str(e)
 
-                try:
-                    result = await response.json()
-                    logger.info(f"{method} {url} — успешно: {result}")
-                    return result, None
-                except Exception:
-                    logger.error(f"{method} {url} — не JSON: {text}")
-                    return None, "Ошибка: ответ не является JSON"
-        except Exception as e:
-            logger.error(f"Сбой запроса к API: {str(e)}")
-            return None, f"Сбой соединения: {str(e)}"
 
 
 async def send_error_message(message: types.Message, error: str):

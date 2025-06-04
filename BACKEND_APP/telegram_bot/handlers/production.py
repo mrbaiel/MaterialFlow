@@ -1,7 +1,11 @@
+from Tools.scripts.generate_opcode_h import header
 from aiogram import Router, types
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from datetime import date
+
+from pyexpat.errors import messages
+
 from telegram_bot import config
 from telegram_bot.states import AddBatchState, AddSubBatchState
 from telegram_bot.utils import make_api_request, send_error_message
@@ -11,7 +15,9 @@ router = Router()
 
 @router.message(Command('add_batch'))
 async def add_batch_start(message: types.Message, state: FSMContext):
-    result, error = await make_api_request('GET', 'products/', state=state)
+    user_id = message.from_user.id
+    headers = {"X-User-ID": str(user_id)}
+    result, error = await make_api_request('GET', 'products/', headers=headers)
     if error:
         await send_error_message(message, error)
         return
@@ -53,6 +59,9 @@ async def add_batch_quantity(message: types.Message, state: FSMContext):
 
 @router.message(AddBatchState.date)
 async def add_batch_date(message: types.Message, state: FSMContext):
+    user_id = message.from_user.id
+    headers = {"X-User-ID": str(user_id)}
+
     data = await state.get_data()
     date_str = message.text.strip()
     try:
@@ -62,7 +71,7 @@ async def add_batch_date(message: types.Message, state: FSMContext):
         else:
             production_date = date.fromisoformat(date_str).isoformat()
     except ValueError:
-        await send_error_message(message, "Неверный формат даты (YYYY-MM-DD)")
+        await send_error_message(message, "Неверный формат даты (ГГГГ-ММ-ДД)")
         return
 
     payload = {
@@ -70,7 +79,10 @@ async def add_batch_date(message: types.Message, state: FSMContext):
         'quantity': data['quantity'],
         'production_date': production_date,
     }
-    result, error = await make_api_request('POST', 'batches/', payload, config.API_TOKEN)
+
+    print(f"ДАННЫЕ: {payload}")
+    result, error = await make_api_request('POST', 'batches/', data=payload, headers=headers)
+
     if error:
         await send_error_message(message, error)
     else:
@@ -80,7 +92,9 @@ async def add_batch_date(message: types.Message, state: FSMContext):
 
 @router.message(Command('add_subbatch'))
 async def add_subbatch_start(message: types.Message, state: FSMContext):
-    result, error = await make_api_request('GET', 'batches/?limit=10', state)
+    user_id = message.from_user.id
+    headers = {"X-User-ID": str(user_id)}
+    result, error = await make_api_request('GET', 'batches/?limit=10', headers=headers)
     print(f"{result} РЕЗУЛЬТАТ")
 
     if error:
@@ -120,7 +134,9 @@ async def add_subbatch_quantity(message: types.Message, state: FSMContext):
         await send_error_message(message, "Неверное количество")
         return
 
-    result, error = await make_api_request('GET', 'employees/', token=config.API_TOKEN)
+    user_id = message.from_user.id
+    headers = {"X-User-ID": str(user_id)}
+    result, error = await make_api_request('GET', 'employees/', headers=headers)
 
     if error:
         await send_error_message(message, error)
@@ -156,7 +172,9 @@ async def add_subbatch_employees(callback: types.CallbackQuery, state: FSMContex
             'employee_ids': employee_ids,
         }
 
-        result, error = await make_api_request('POST', 'subbatch/', payload, config.API_TOKEN)
+        user_id = callback.from_user.id
+        headers = {"X-User-ID": str(user_id)}
+        result, error = await make_api_request('POST', 'subbatch/', headers=headers, payload=payload)
         if error:
             await send_error_message(callback.message, error)
         else:
@@ -194,16 +212,19 @@ async def add_subbatch_employees(callback: types.CallbackQuery, state: FSMContex
             reply_markup=keyboard
         )
 
+
 @router.callback_query(AddSubBatchState.employees, lambda c: c.data == 'done')
 async def add_subbatch_done(callback: types.CallbackQuery, state: FSMContext):
     data = await state.get_data()
     payload = {
-        'production_batch': data['batch_id'],  # ❗ Используем правильное имя
+        'production_batch': data['batch_id'],
         'quantity': data['quantity'],
         'employee_ids': data.get('employee_ids', []),
     }
 
-    result, error = await make_api_request('POST', 'subbatch/', payload, config.API_TOKEN)
+    user_id = callback.from_user.id
+    headers = {"X-User-ID": str(user_id)}
+    result, error = await make_api_request('POST', 'subbatch/', payload, headers=headers)
 
     if error:
         # Проверяем конкретную ошибку от API

@@ -8,7 +8,7 @@ from .tasks import generate_production_report, generate_orders_report
 
 from apps.orders.models import Client, Order, OrderItem, Payment
 from apps.orders.serializers import ClientSerializer, OrderSerializer, OrderItemSerializer, PaymentSerializer
-from apps.production.views import IsOwnerOrAdmin
+from apps.employees.views import IsOwnerOrAdmin
 
 
 class ClientViewSet(viewsets.ModelViewSet):

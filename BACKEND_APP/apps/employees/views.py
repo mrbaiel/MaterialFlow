@@ -1,6 +1,6 @@
 from rest_framework import permissions
 from rest_framework import viewsets
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny
 
 from apps.employees.models import Employees
 from apps.employees.serializers import EmployeeSerializer
@@ -15,7 +15,7 @@ class IsOwnerOrAdmin(permissions.BasePermission):
 class EmployeeViewSet(viewsets.ModelViewSet):
     queryset = Employees.objects.all()
     serializer_class = EmployeeSerializer
-    permission_classes = [IsAuthenticated, IsOwnerOrAdmin]
+    permission_classes = [AllowAny, IsOwnerOrAdmin]
     filterset_fields = ['first_name', 'last_name']
     search_fields = ['first_name', 'last_name']
 

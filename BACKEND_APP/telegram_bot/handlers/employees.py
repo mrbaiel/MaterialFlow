@@ -42,7 +42,10 @@ async def add_employee_address(message: types.Message, state: FSMContext):
         'phone': data['phone'],
         'address': message.text.strip() or "",
     }
-    result, error = await make_api_request('POST', 'employees/', payload, config.API_TOKEN)
+
+    user_id = message.from_user.id
+    headers = {"X-User-ID": str(user_id)}
+    result, error = await make_api_request('POST', 'employees/', payload, headers=headers)
     if error:
         await send_error_message(message, error)
     else:
