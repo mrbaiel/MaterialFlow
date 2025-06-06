@@ -1,19 +1,15 @@
-from Tools.scripts.generate_opcode_h import header
-from aiogram import Router, types
-from aiogram.filters import Command
+from aiogram import Router, types, F
 from aiogram.fsm.context import FSMContext
-from datetime import date
+from datetime import date, datetime
 
-from pyexpat.errors import messages
 
-from telegram_bot import config
 from telegram_bot.states import AddBatchState, AddSubBatchState
 from telegram_bot.utils import make_api_request, send_error_message
 
 router = Router()
 
 
-@router.message(Command('add_batch'))
+@router.message(F.text.in_({'add_batch', "Добавить партию"}))
 async def add_batch_start(message: types.Message, state: FSMContext):
     user_id = message.from_user.id
     headers = {"X-User-ID": str(user_id)}
@@ -21,6 +17,7 @@ async def add_batch_start(message: types.Message, state: FSMContext):
     if error:
         await send_error_message(message, error)
         return
+
     products = result.get('results', result)
 
     if not isinstance(products, list):
@@ -28,7 +25,8 @@ async def add_batch_start(message: types.Message, state: FSMContext):
         return
 
     keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
-        [types.InlineKeyboardButton(text=f"{p['name']}", callback_data=f"product_{p['id']}")]
+        [types.InlineKeyboardButton(text=f"{p['name']} ({p['color_type']})" if p.get('is_colored') else p['name'],
+                                    callback_data=f"product_{p['id']}")]
         for p in products[:10]
     ])
     await message.reply("Выберите продукт:", reply_markup=keyboard)
@@ -67,7 +65,6 @@ async def add_batch_date(message: types.Message, state: FSMContext):
     try:
         if date_str.lower() == 'сегодня':
             production_date = date.today().isoformat()
-            print(f"ДАТА: {production_date}")
         else:
             production_date = date.fromisoformat(date_str).isoformat()
     except ValueError:
@@ -80,7 +77,6 @@ async def add_batch_date(message: types.Message, state: FSMContext):
         'production_date': production_date,
     }
 
-    print(f"ДАННЫЕ: {payload}")
     result, error = await make_api_request('POST', 'batches/', data=payload, headers=headers)
 
     if error:
@@ -90,12 +86,11 @@ async def add_batch_date(message: types.Message, state: FSMContext):
     await state.clear()
 
 
-@router.message(Command('add_subbatch'))
+@router.message(F.text.in_({'add_subbatch', "Добавить подпартию"}))
 async def add_subbatch_start(message: types.Message, state: FSMContext):
     user_id = message.from_user.id
     headers = {"X-User-ID": str(user_id)}
-    result, error = await make_api_request('GET', 'batches/?limit=10', headers=headers)
-    print(f"{result} РЕЗУЛЬТАТ")
+    result, error = await make_api_request('GET', 'batches/?limit=7', headers=headers)
 
     if error:
         await send_error_message(message, error)
@@ -105,10 +100,15 @@ async def add_subbatch_start(message: types.Message, state: FSMContext):
         return
 
     batches = result.get('results', [])
+    batches = sorted(
+        batches,
+        key=lambda b: datetime.strptime(b['production_date'], '%Y-%m-%d'),
+        reverse=True
+    )
 
     keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
         [types.InlineKeyboardButton(
-            text=f"#{b['id']} {b['product']['name']}",
+            text=f"({b['production_date'].replace('-', '.')}) {b['product']['name']} {b['quantity']}шт",
             callback_data=f"batch_{b['id']}"
         )] for b in batches if isinstance(b, dict) and isinstance(b.get("product"), dict)
     ])

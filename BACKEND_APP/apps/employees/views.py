@@ -15,7 +15,7 @@ class IsOwnerOrAdmin(permissions.BasePermission):
 class EmployeeViewSet(viewsets.ModelViewSet):
     queryset = Employees.objects.all()
     serializer_class = EmployeeSerializer
-    permission_classes = [AllowAny, IsOwnerOrAdmin]
+    permission_classes = [AllowAny]
     filterset_fields = ['first_name', 'last_name']
     search_fields = ['first_name', 'last_name']
 

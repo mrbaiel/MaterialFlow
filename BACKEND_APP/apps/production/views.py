@@ -1,4 +1,3 @@
-from rest_framework.validators import ValidationError
 from rest_framework.permissions import AllowAny
 from rest_framework import viewsets
 

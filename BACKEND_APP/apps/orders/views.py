@@ -1,5 +1,5 @@
 from rest_framework import viewsets
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny
 from rest_framework.views import APIView
 from rest_framework.response import Response
 
@@ -14,7 +14,7 @@ from apps.employees.views import IsOwnerOrAdmin
 class ClientViewSet(viewsets.ModelViewSet):
     queryset = Client.objects.all()
     serializer_class = ClientSerializer
-    permission_classes = [IsAuthenticated, IsOwnerOrAdmin]
+    permission_classes = [AllowAny]
     filterset_fields = ['first_name', 'last_name']
     search_fields = ['first_name', 'last_name']
 
@@ -22,7 +22,7 @@ class ClientViewSet(viewsets.ModelViewSet):
 class OrderViewSet(viewsets.ModelViewSet):
     queryset = Order.objects.select_related('client')
     serializer_class = OrderSerializer
-    permission_classes = [IsAuthenticated, IsOwnerOrAdmin]
+    permission_classes = [AllowAny]
     filterset_fields = ['status', 'payment_status', 'order_date']
     search_fields = ['client__first_name', 'client__last_name']
 
@@ -30,19 +30,19 @@ class OrderViewSet(viewsets.ModelViewSet):
 class OrderItemViewSet(viewsets.ModelViewSet):
     queryset = OrderItem.objects.select_related('order', 'product')
     serializer_class = OrderItemSerializer
-    permission_classes = [IsAuthenticated, IsOwnerOrAdmin]
+    permission_classes = [AllowAny, ]
     filterset_fields = ['order']
 
 
 class PaymentViewSet(viewsets.ModelViewSet):
     queryset = Payment.objects.select_related('order')
     serializer_class = PaymentSerializer
-    permission_classes = [IsAuthenticated, IsOwnerOrAdmin]
+    permission_classes = [AllowAny, ]
     filterset_fields = ['payment_date']
 
 
 class ProductionReportView(APIView):
-    permission_classes = [IsAuthenticated, IsOwnerOrAdmin]
+    permission_classes = [AllowAny, ]
 
     def get(self, request):
         start_date = request.query_params.get('start_date')
@@ -56,7 +56,7 @@ class ProductionReportView(APIView):
 
 
 class OrdersReportView(APIView):
-    permission_classes = [IsAuthenticated, IsOwnerOrAdmin]
+    permission_classes = [AllowAny, ]
 
     def get(self, request):
         status = request.query_params.get('status')

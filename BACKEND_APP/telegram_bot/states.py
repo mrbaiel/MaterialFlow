@@ -37,9 +37,3 @@ class AddOrderItemState(StatesGroup):
     order = State()
     product = State()
     quantity = State()
-
-
-class AddPaymentState(StatesGroup):
-    order = State()
-    amount = State()
-    date = State()

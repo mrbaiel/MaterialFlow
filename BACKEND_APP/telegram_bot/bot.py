@@ -1,7 +1,7 @@
 from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
 from telegram_bot.config import BOT_TOKEN
-from telegram_bot.handlers import auth, production, employees
+from telegram_bot.handlers import auth, production, employees, orders, clients
 from telegram_bot.middleware import AccessMiddleware
 
 
@@ -10,7 +10,12 @@ async def main():
     bot = Bot(token=BOT_TOKEN)
     dp = Dispatcher(storage=MemoryStorage())
     dp.message.middleware(AccessMiddleware())
-    dp.include_routers(auth.router, production.router, employees.router)
+    dp.include_routers(auth.router,
+                       production.router,
+                       employees.router,
+                       clients.router,
+                       orders.router,
+                       )
     await dp.start_polling(bot)
 
 if __name__ == '__main__':
