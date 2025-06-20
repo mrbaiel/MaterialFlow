@@ -52,8 +52,8 @@
 1. Клонировать репозиторий:
 
    ```bash
-   git clone https://github.com/your-username/building_materials_management.git
-   cd building_materials_management
+   git clone https://github.com/mrbaiel/MaterialFlow.git
+   cd MaterialFlow
 
    ```
 
@@ -84,25 +84,3 @@
    Бэкенд: http://localhost:8000/api/
    Фронтенд: http://localhost:3000/
    API документация: http://localhost:8000/api/docs/
-
-## Структура проекта
-   ├── backend/ # Django-проект
-   │ ├── apps/ # Django-приложения
-   │ │ ├── users/ # Пользователи и аутентификация
-   │ │ ├── materials/ # Учёт строительных материалов
-   │ │ ├── production/ # Производство пескоблоков
-   │ │ ├── orders/ # Управление заказами
-   │ │ ├── employees/ # Данные работников
-   │ │ └── analytics/ # Аналитика и отчёты
-   │ ├── backend/ # Настройки Django (settings, urls)
-   │ └── telegram_bot/ # Интеграция с Telegram
-   │
-   ├── frontend/ # React-приложение
-   │ ├── public/ # Статические файлы (HTML, favicon)
-   │ └── src/ # Исходный код фронтенда
-   │ ├── components/ # React-компоненты (кнопки, формы)
-   │ ├── pages/ # Страницы приложения
-   │ ├── services/ # API-клиенты (axios, запросы к бэкенду)
-   │ └── store/ # Redux-хранилище (состояние приложения)
-   │
-   └── docker-compose.yml # Конфигурация Docker
